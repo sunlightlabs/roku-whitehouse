@@ -103,6 +103,7 @@ End Function
 Function ShowVideosForCategory(category)
     waitobj = ShowPleaseWait("Retrieving videos in this category", "")
     videos = GetVideosForCategory(category)
+    video_count = str(videos.Count())
     screen = CreateObject("roPosterScreen")
     port = CreateObject("roMessagePort")
     screen.SetMessagePort(port)
@@ -111,12 +112,17 @@ Function ShowVideosForCategory(category)
     screen.SetAdDisplayMode("scale-to-fit")   
     screen.SetContentList(videos)
     screen.SetFocusedListItem(0)
+    screen.SetBreadcrumbText("", "1 of " + video_count)
     waitobj = "forget it"
     screen.Show() 
-    
+        
     while true
         msg = wait(0, screen.GetMessagePort())
         if type(msg) = "roPosterScreenEvent" then
+            if msg.isListItemFocused() then
+                screen.SetBreadcrumbText("", str(msg.GetIndex() + 1) + " of " + video_count)
+                screen.show()
+            end if
             if msg.isListItemSelected() then
                 ShowVideoScreen(videos[msg.GetIndex()])
             else if msg.isScreenClosed() then
