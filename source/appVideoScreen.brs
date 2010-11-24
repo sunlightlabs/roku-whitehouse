@@ -22,6 +22,7 @@ Function showVideoFailureMessage()
     message.Show()
     while true
         dlmsg = wait(0, message.GetMessagePort())
+        print type(dlmsg)
         if dlmsg.isButtonPressed()
             return -1 
         endif
@@ -41,7 +42,6 @@ Function showVideoScreen(episode As Object)
     screen.SetMessagePort(port)
     print "printing episode"
     print episode
-    print episode.StreamUrls[0]
     screen.Show()
     screen.SetPositionNotificationPeriod(30)
     screen.SetContent(episode)
@@ -58,7 +58,8 @@ Function showVideoScreen(episode As Object)
                 exit while
             elseif msg.isRequestFailed()
                 print "Video request failure: "; msg.GetIndex(); " " msg.GetData() 
-                showVideoFailureMessage()
+                'showVideoFailureMessage()
+                return -1
             elseif msg.isStatusMessage()
                 print "Video status: "; msg.GetIndex(); " " msg.GetData() 
             elseif msg.isButtonPressed()
