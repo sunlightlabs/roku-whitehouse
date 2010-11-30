@@ -22,10 +22,10 @@ Sub initTheme()
     theme.OverhangOffsetSD_X = "0"
     theme.OverhangOffsetSD_Y = "25"
     theme.OverhangSliceSD = "pkg:/images/overhang_background_sd_720x110.jpg"
-    theme.OverhangLogoSD  = "pkg:/images/overhang_logo_sd_160x40.png"
+    theme.OverhangLogoSD  = "pkg:/images/overhang_logo_sd_160x40.jpg"
     theme.OverhangOffsetHD_X = "0"
     theme.OverhangOffsetHD_Y = "25"
-    theme.OverhangSliceHD = "pkg:/images/overhang_background_hd_1281x165.png"
+    theme.OverhangSliceHD = "pkg:/images/overhang_background_hd_1281x165.jpg"
     theme.OverhangLogoHD  = ""
     theme.BreadcrumbTextRight = "#E8BB4B"
     theme.BackgroundColor = "#FFFFFF"
@@ -126,11 +126,12 @@ Function ShowLiveVideo(video)
     'need to check if any upcoming or available
 '    http = NewHttp("10.13.33.209")
     waitobj = ShowPleaseWait("Checking for live videos", "")
-    url = "http://api.realtimecongress.org/api/v1/videos.xml?per_page=7&apikey=" + GetKey() + "&live=true&chamber=whitehouse"
+    videos = CreateObject("roArray", 10, true)
+    url = "http://api.realtimecongress.org/api/v1/videos.xml?per_page=7&apikey=" + GetKey() + "&status!=archived&sort=status&chamber=whitehouse"
+    print url
     http = NewHttp(url)
     response = http.GetToStringWithRetry()
     xml = CreateObject("roXMLElement")
-    videos = CreateObject("roArray", 10, true)
     if not xml.Parse(response) then
         'show error dialog
         print "couldn't parse response"
@@ -141,18 +142,50 @@ Function ShowLiveVideo(video)
     else:
         if xml.count.GetText().ToInt() > 0 then
             for each vid in xml.videos.video
-                o = {   StreamUrls : [vid.GetNamedElements("clip-urls")[0].hls.GetText()],
-                        Live : true,
-                        StreamBitrates : [0],
-                        StreamQualities : "HD",
-                        StreamFormat: "hls",
-                        ContentType : "episode",
-                        Title : vid.GetNamedElements("title").GetText(),
-                        Description: vid.GetNamedElements("pubdate").GetText(),
+                status = vid.GetNamedElements("status").GetText()
+                if status = "live" then
+                    o = {   StreamUrls : [vid.GetNamedElements("clip-urls")[0].hls.GetText()],
+                            Live : true,
+                            StreamBitrates : [0],
+                            StreamQualities : "HD",
+                            StreamFormat: "hls",
+                            ContentType : "episode",
+                            Title : vid.GetNamedElements("title").GetText(),
+                            Description: vid.GetNamedElements("pubdate").GetText(),
+                            ShortDescriptionLine1: vid.GetNamedElements("title").GetText(),
+                            SDPosterUrl: "pkg:/images/video_clip_poster_sd_185x94.jpg",
+                            HDPosterUrl: "pkg:/images/video_clip_poster_hd250x141.jpg",
+                            Status: status
+                        }
+                else
+                    timestamp = vid.GetNamedElements("start-time").GetText()
+                    date = Left(timestamp, 10)
+                    time = Mid(timestamp, 12, 8)
+                    
+                    rodate = CreateObject("roDateTime")
+                    rodate.fromISO8601String(date + " " + time)
+                    hours = rodate.getHours()
+                    minutes = rodate.getMinutes()
+                    print hours
+                    p = "AM"
+                    if hours > 12 then
+                        hours = hours - 12
+                        p = "PM"
+                    else if hours = 12 then
+                        p = "PM"
+                    end if
+                    start_time = hours.toStr() + ":" + minutes.toStr() + " " + p
+                    rodate.toLocalTime()
+                    o = {
+                        ContentType: "episode",
+                        Title: vid.GetNamedElements("title").GetText(),
                         ShortDescriptionLine1: vid.GetNamedElements("title").GetText(),
-                        SDPosterUrl: "pkg:/images/video_clip_poster_sd_185x94.jpg",
-                        HDPosterUrl: "pkg:/images/video_clip_poster_hd250x141.jpg"
-                    }
+                        ShortDescriptionLine2: "Starting at " + start_time,
+                        Status: status,
+                        SDPosterUrl: "pkg:/images/video_clip_poster_sd_185x94_muted.jpg",
+                        HDPosterUrl: "pkg:/images/video_clip_poster_hd250x141_muted.jpg",
+                        }
+                end if
                 videos.push(o)
             next 
             screen = CreateObject("roPosterScreen")
@@ -169,7 +202,9 @@ Function ShowLiveVideo(video)
             msg = wait(0, screen.GetMessagePort())
                 if type(msg) = "roPosterScreenEvent" then
                     if msg.isListItemSelected() then
-                        ShowVideoScreen(videos[msg.GetIndex()])
+                        if videos[msg.GetIndex()].Status = "live" then 
+                            ShowVideoScreen(videos[msg.GetIndex()])
+                        end if
                     else if msg.isScreenClosed() then
                         return -1
                     end if
