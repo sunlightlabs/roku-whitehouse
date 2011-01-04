@@ -16,7 +16,7 @@
 
 Function showVideoFailureMessage()
     message = CreateObject("roMessageDialog")
-    message.SetText("We're sorry, the video you requested could not be loaded. We have recorded this event and will report it to the Clerk of the U.S. House of Representatives, the provider of this content.")
+    message.SetText("We're sorry, the video you requested could not be loaded. We have recorded this event and will report it to the White House.")
     message.AddButton(1, "OK")
     message.SetMessagePort(CreateObject("roMessagePort"))    
     message.Show()
@@ -46,6 +46,9 @@ Function showVideoScreen(episode As Object)
     screen.SetPositionNotificationPeriod(30)
     screen.SetContent(episode)
     screen.Show()
+    for each b in episode.StreamUrls
+        print b
+    next
     'Uncomment his line to dump the contents of the episode to be played
     'PrintAA(episode)
 

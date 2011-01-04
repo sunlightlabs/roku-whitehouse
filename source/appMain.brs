@@ -20,11 +20,11 @@ Sub initTheme()
     theme = CreateObject("roAssociativeArray")
 
     theme.OverhangOffsetSD_X = "0"
-    theme.OverhangOffsetSD_Y = "25"
-    theme.OverhangSliceSD = "pkg:/images/overhang_background_sd_720x110.jpg"
-    theme.OverhangLogoSD  = "pkg:/images/overhang_logo_sd_160x40.jpg"
+    theme.OverhangOffsetSD_Y = "0"
+    theme.OverhangSliceSD = "pkg:/images/overhang_background_sd_720x83.jpg"
+    theme.OverhangLogoSD  = ""
     theme.OverhangOffsetHD_X = "0"
-    theme.OverhangOffsetHD_Y = "25"
+    theme.OverhangOffsetHD_Y = "0"
     theme.OverhangSliceHD = "pkg:/images/overhang_background_hd_1281x165.jpg"
     theme.OverhangLogoHD  = ""
     theme.BreadcrumbTextRight = "#E8BB4B"
@@ -143,40 +143,43 @@ Function ShowLiveVideo(video)
         if xml.count.GetText().ToInt() > 0 then
             for each vid in xml.videos.video
                 status = vid.GetNamedElements("status").GetText()
+                timestamp = vid.GetNamedElements("start-time").GetText()
+                date = Left(timestamp, 10)
+                time = Mid(timestamp, 12, 8)
+                
+                rodate = CreateObject("roDateTime")
+                rodate.fromISO8601String(date + " " + time)
+                rodate.toLocalTime()
+                hours = rodate.getHours()
+                minutes = rodate.getMinutes().toStr()
+                if Len(minutes) = 1 then
+                    minutes = "0" + minutes
+                end if 
+                p = "AM"
+                if hours > 12 then
+                    hours = hours - 12
+                    p = "PM"
+                else if hours = 12 then
+                    p = "PM"
+                end if
+                start_time = Str(hours).Trim() + ":" + minutes.Trim() + " " + p
+
                 if status = "live" then
                     o = {   StreamUrls : [vid.GetNamedElements("clip-urls")[0].hls.GetText()],
                             Live : true,
                             StreamBitrates : [0],
-                            StreamQualities : "HD",
+                            StreamQualities : "SD",
                             StreamFormat: "hls",
                             ContentType : "episode",
                             Title : vid.GetNamedElements("title").GetText(),
-                            Description: vid.GetNamedElements("pubdate").GetText(),
+                            Description: "Started at " + start_time,
                             ShortDescriptionLine1: vid.GetNamedElements("title").GetText(),
                             SDPosterUrl: "pkg:/images/video_clip_poster_sd_185x94.jpg",
                             HDPosterUrl: "pkg:/images/video_clip_poster_hd250x141.jpg",
                             Status: status
                         }
                 else
-                    timestamp = vid.GetNamedElements("start-time").GetText()
-                    date = Left(timestamp, 10)
-                    time = Mid(timestamp, 12, 8)
-                    
-                    rodate = CreateObject("roDateTime")
-                    rodate.fromISO8601String(date + " " + time)
-                    hours = rodate.getHours()
-                    minutes = rodate.getMinutes()
-                    print hours
-                    p = "AM"
-                    if hours > 12 then
-                        hours = hours - 12
-                        p = "PM"
-                    else if hours = 12 then
-                        p = "PM"
-                    end if
-                    start_time = hours.toStr() + ":" + minutes.toStr() + " " + p
-                    rodate.toLocalTime()
-                    o = {
+                                        o = {
                         ContentType: "episode",
                         Title: vid.GetNamedElements("title").GetText(),
                         ShortDescriptionLine1: vid.GetNamedElements("title").GetText(),
@@ -285,7 +288,7 @@ Function GetVideo(item)
         o.StreamUrls = [video_url]
         o.StreamBitrates = [0]
         o.StreamFormat = "mp4"
-        o.StreamQualities = ["HD"]
+        o.StreamQualities = ["SD"]
         o.SDPosterUrl = "pkg:/images/video_clip_poster_sd_185x94.jpg"
         o.HDPosterUrl = "pkg:/images/video_clip_poster_hd250x141.jpg"
         o.ContentType = "episode"
