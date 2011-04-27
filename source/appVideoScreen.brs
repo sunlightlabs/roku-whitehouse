@@ -16,7 +16,7 @@
 
 Function showVideoFailureMessage()
     message = CreateObject("roMessageDialog")
-    message.SetText("We're sorry, the video you requested could not be loaded. We have recorded this event and will report it to the White House.")
+    message.SetText("We're sorry, the video you requested could not be loaded. It may not have started yet. Please try again later.")
     message.AddButton(1, "OK")
     message.SetMessagePort(CreateObject("roMessagePort"))    
     message.Show()
@@ -61,7 +61,7 @@ Function showVideoScreen(episode As Object)
                 exit while
             elseif msg.isRequestFailed()
                 print "Video request failure: "; msg.GetIndex(); " " msg.GetData() 
-                'showVideoFailureMessage()
+                showVideoFailureMessage()
                 return -1
             elseif msg.isStatusMessage()
                 print "Video status: "; msg.GetIndex(); " " msg.GetData() 

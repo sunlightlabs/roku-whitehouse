@@ -1,8 +1,12 @@
 Sub Main()
 
+    
+   
+    setDateObjs()
+
+        
     initTheme()
     showCategories() 
-
 End Sub
 
 
@@ -13,7 +17,45 @@ End Sub
 '** Theme attributes affect the branding of the appication
 '** and are artwork, colors and offsets specific to the app
 '*************************************************************
+Sub setDateObjs()
+    'testing ground
+    m.months = { Jan: "01"
+               Feb: "02"
+               Mar: "03"
+               Apr: "04"
+               May: "05"
+               Jun: "06"
+               Jul: "07"
+               Aug: "08"
+               Sep: "09"
+               Oct: "10"
+               Nov: "11"
+               Dec: "12"
+            }
 
+
+    m.DST_hash = { start_2011: "2011-03-13 02:00:00"
+                 end_2011: "2011-11-06 02:00:00"
+                 start_2012: "2012-03-11 02:00:00"
+                 end_2012: "2012-11-04 02:00:00"
+                 start_2013: "2013-03-10 02:00:00"
+                 end_2013: "2013-11-03 02:00:00"
+                 start_2014: "2014-03-09 02:00:00"
+                 end_2014: "2014-11-02 02:00:00"
+                 start_2015: "2015-03-08 02:00:00"
+                 end_2015: "2015-11-01 02:00:00"
+                }
+
+    m.today = CreateObject("roDateTime")
+    m.this_year = m.today.GetYear().toStr()
+    
+    m.dom = CreateObject("roRegex", " \d{2} ", "i")
+    m.month = CreateObject("roRegex", "[A-Z]{1}[a-z]{2} ", "")
+    m.time_re = CreateObject("roRegex", "\d{2}:\d{2}:\d{2}", "")
+    m.year_re = CreateObject("roRegex", "\d{4}", "")
+
+End Sub
+ 
 Sub initTheme()
 
     app = CreateObject("roAppManager")
@@ -36,9 +78,11 @@ End Sub
 
 Function showCategories()
 
-    categories = [{ Title: "White House Live",
+    categories = [
+                  { Title: "White House Live",
                     SDPosterUrl: "pkg:/images/category_poster_304x237_livestream.jpg",
-                    HDPosterUrl: "pkg:/images/category_poster_304x237_livestream.jpg"
+                    HDPosterUrl: "pkg:/images/category_poster_304x237_livestream.jpg",
+                    rssUrl: "http://www.whitehouse.gov/feed/iphone/live"
                   },
                   { Title: "Your Weekly Address",
                     SDPosterUrl: "pkg:/images/category_poster_304x237_yourweeklyaddress.jpg",
@@ -95,11 +139,11 @@ Function showCategories()
         msg = wait(0, screen.GetMessagePort())
         if type(msg) = "roPosterScreenEvent" then 
             if msg.isListItemSelected() then
-                if msg.GetIndex() = 0 then
-                    ShowLiveVideo(categories[0])
-                else
+                'if msg.GetIndex() = 0 then
+                 '   ShowLiveVideo(categories[0])
+                'else
                     ShowVideosForCategory(categories[msg.GetIndex()])
-                end if 
+                'end if 
             else if msg.isScreenClosed() then
                 return -1
             end if
@@ -143,7 +187,7 @@ Function ShowLiveVideo(video)
         if xml.count.GetText().ToInt() > 0 then
             for each vid in xml.videos.video
                 status = vid.GetNamedElements("status").GetText()
-                timestamp = vid.GetNamedElements("start-time").GetText()
+                timestamp = vid.GetNamedElements("start_time").GetText()
                 date = Left(timestamp, 10)
                 time = Mid(timestamp, 12, 8)
                 
@@ -165,7 +209,7 @@ Function ShowLiveVideo(video)
                 start_time = Str(hours).Trim() + ":" + minutes.Trim() + " " + p
 
                 if status = "live" then
-                    o = {   StreamUrls : [vid.GetNamedElements("clip-urls")[0].hls.GetText()],
+                    o = {   StreamUrls : [vid.GetNamedElements("clip_urls")[0].hls.GetText()],
                             Live : true,
                             StreamBitrates : [0],
                             StreamQualities : "SD",
@@ -280,21 +324,83 @@ End Function
 Function GetVideo(item)
     video_url = item.enclosure@url
     ext = right(video_url, 3)
+    o = {}
+    
     if ext = "mp4" or ext = "m4v" then
-        o = {}
-        o.Title = item.title.GetText()
-        o.Description = item.description.GetText()
-        o.ShortDescriptionLine1 = o.Title
-        o.StreamUrls = [video_url]
-        o.StreamBitrates = [0]
         o.StreamFormat = "mp4"
-        o.StreamQualities = ["SD"]
+        o.Description = item.description.GetText()
+        o.StreamBitrates = [0]
         o.SDPosterUrl = "pkg:/images/video_clip_poster_sd_185x94.jpg"
         o.HDPosterUrl = "pkg:/images/video_clip_poster_hd250x141.jpg"
-        o.ContentType = "episode"
+    else 
+        ext = right(video_url, 4)
+        if ext = "m3u8" then
+            o.StreamFormat = "hls"
+            o.StreamBitrates = [817]
+            
+            ds = item.pubDate.getText()
+            day_of_month =  m.dom.Match(ds)[0].Trim()
+            month_text = m.month.Match(ds)[0]
+            month = m.months[month_text.Trim()]
+            time_matches = m.time_re.Match(ds)
+            hour = time_matches[0].left(2)
+            minutes = time_matches[0].mid(3,2)
+            year = m.year_re.Match(ds)[0].Trim()
 
-        return o
-    end if
-    return -1
+            dst_start_date = CreateObject("roDateTime")
+            dst_start_date.fromISO8601String(m.DST_hash["start_"+m.this_year])
+            dst_end_date = CreateObject("roDateTime")
+            dst_end_date.fromISO8601String(+m.DST_hash["end_"+m.this_year])
+            if m.today.getMonth() >= dst_end_date.getMonth() and m.today.getDayOfMonth() >= dst_end_date.getDayOfMonth then
+                offset = -5
+            elseif m.today.getMonth() >= dst_start_date.getMonth() and m.today.getDayOfMonth() >= dst_start_date.getDayOfMonth() then
+                offset = -4
+            else
+                offset = -5
+            endif
+
+            hour_int = hour.toInt()
+            minute_int = minutes.toInt()
+            if m.today.getHours() >= hour_int and m.today.getMinutes() >= minutes_int then
+                o.Description = "In Progress"
+                o.SDPosterUrl = "pkg:/images/video_clip_poster_sd_185x94.jpg"
+                o.HDPosterUrl = "pkg:/images/video_clip_poster_hd250x141.jpg"
+    
+            else
+                hour_int = hour_int + offset
+                o.SDPosterUrl = "pkg:/images/video_clip_poster_sd_185x94_muted.jpg"
+                o.HDPosterUrl = "pkg:/images/video_clip_poster_hd250x141_muted.jpg"
+                if hour_int >= 12 then
+                    ampm = "PM"
+                    if hour_int > 12 then
+                        hour_text = (hour_int - 12).toStr() + ":" + minutes + " " + ampm + " EST"
+                    else
+                        hour_text = hour_int.toStr() + ":" + minutes + " " + ampm + " EST"
+                    endif
+                else
+                    ampm = "AM"
+                    hour_text = hour_int.toStr() + ":" + minutes + " " + ampm + " EST"
+                endif 
+                if m.today.getDayOfMonth() < day_of_month.toInt() then
+                    if m.today.getDayOfMonth() + 1 = day_of_month.toInt() then
+                        o.Description = "Starts tomorrow at " + hour_text
+                    else
+                        o.Description = "Starts " + month_text + " " + day_of_month + " at " + hour_text
+                    endif
+                else
+                    o.Description ="Starting at " + hour_text
+                endif
+            endif
+        else
+            return -1
+        endif
+    endif  
+    o.Title = item.title.GetText()
+    o.ShortDescriptionLine1 = o.Title
+    o.StreamUrls = [video_url]
+    o.StreamQualities = ["SD"]
+    o.ContentType = "episode"
+
+    return o
 
 End Function
