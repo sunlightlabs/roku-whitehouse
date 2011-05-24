@@ -14,6 +14,31 @@
 '** understand what's going on, especially in the case of errors
 '***********************************************************  
 
+Function analytics(hit_type, video_id)
+    
+    utmac = getGAKey()
+    utmhn = "roku.sunlightfoundation.com"
+    utmn = itostr(rnd(9999999999))
+    cookie = itostr(rnd(99999999))
+    random_num = itostr(rnd(2147483647))
+    todayobj = CreateObject("roDateTime")
+    today = itostr(todayobj.getHours() * 60 * 60) + itostr(todayobj.getMinutes() * 60)
+    referer = "http://rokudevice.com"
+    device_info = CreateObject("roDeviceInfo")
+    uservar = "device_id_" + device_info.GetDeviceUniqueId()
+    uservar2 = "dt_" + device_info.getdisplayType()  
+    uservar3 = "vid_" + video_id
+    utmp = "/roku/" + hit_type + "/" + uservar3
+
+    url = "http://www.google-analytics.com/__utm.gif?utmwv=1&utmn="+utmn+"&utmsr=-&utmsc=-&utmul=-&utmje=0&utmfl=-&utmdt=-&utmhn="+utmhn+"&utmr="+referer+"&utmp="+utmp+"&utmac="+utmac+"&utmcc=__utma%3D"+cookie+"."+random_num+"."+today+"."+today+"."+today+".2%3B%2B__utmb%3D"+cookie+"%3B%2B__utmc%3D"+cookie+"%3B%2B__utmz%3D"+cookie+"."+today+".2.2.utmccn%3D(direct)%7Cutmcsr%3D(direct)%7Cutmcmd%3D(none)%3B%2B__utmv%3D"+cookie+"."+uservar+"%3B"+"."+uservar2+"%3B."+uservar3
+
+    print "posting to " + url 
+    http = NewHttp(url)
+    response = http.GetToStringWithRetry()
+
+    
+End Function
+
 Function showVideoFailureMessage()
     message = CreateObject("roMessageDialog")
     message.SetText("We're sorry, the video you requested could not be loaded. It may not have started yet. Please try again later.")
@@ -42,9 +67,10 @@ Function showVideoScreen(episode As Object)
     screen.SetMessagePort(port)
     print "printing episode"
     print episode
-    screen.Show()
+    'screen.Show()
     screen.SetPositionNotificationPeriod(30)
     screen.SetContent(episode)
+    analytics("videostart-rokuwhitehouse", "")
     screen.Show()
     for each b in episode.StreamUrls
         print b
@@ -62,6 +88,7 @@ Function showVideoScreen(episode As Object)
             elseif msg.isRequestFailed()
                 print "Video request failure: "; msg.GetIndex(); " " msg.GetData() 
                 showVideoFailureMessage()
+                analytics("videofail-rokuwhitehouse", "")
                 return -1
             elseif msg.isStatusMessage()
                 print "Video status: "; msg.GetIndex(); " " msg.GetData() 

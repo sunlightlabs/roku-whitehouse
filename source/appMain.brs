@@ -154,7 +154,7 @@ End Function
 
 Function showNoLiveMessage()
     message = CreateObject("roMessageDialog")
-    message.SetText("We're sorry but there are no live events happening right now")
+    message.SetText("We're sorry but there are no videos in this category. Please check back later.")
     message.AddButton(1, "OK")
     message.SetMessagePort(CreateObject("roMessagePort"))    
     message.Show()
@@ -271,6 +271,10 @@ Function ShowVideosForCategory(category)
     waitobj = ShowPleaseWait("Retrieving videos in this category", "")
     videos = GetVideosForCategory(category)
     video_count = str(videos.Count())
+    if videos.Count() = 0 then
+        ShowNoLiveMessage()
+        return -1
+    endif
     screen = CreateObject("roPosterScreen")
     port = CreateObject("roMessagePort")
     screen.SetMessagePort(port)
@@ -323,7 +327,11 @@ End Function
 
 Function GetVideo(item)
     video_url = item.enclosure@url
-    ext = right(video_url, 3)
+    if video_url <> invalid then
+        ext = right(video_url, 3)
+    else
+        return -1
+    endif
     o = {}
     
     if ext = "mp4" or ext = "m4v" then
@@ -336,8 +344,9 @@ Function GetVideo(item)
         ext = right(video_url, 4)
         if ext = "m3u8" then
             o.StreamFormat = "hls"
-            o.StreamBitrates = [817]
-            
+            o.StreamBitrates = [817] ' [0] ' [817]
+            o.MinBandwidth = 60 
+            m.today = CreateObject("roDateTime")
             ds = item.pubDate.getText()
             day_of_month =  m.dom.Match(ds)[0].Trim()
             month_text = m.month.Match(ds)[0]
@@ -361,7 +370,11 @@ Function GetVideo(item)
 
             hour_int = hour.toInt()
             minute_int = minutes.toInt()
-            if m.today.getHours() >= hour_int and m.today.getMinutes() >= minutes_int then
+            print m.today.getHours().toStr()
+            print m.today.getMinutes().toStr()
+            print hour_int.toStr()
+            print minute_int.toStr()
+            if m.today.getHours() > hour_int or (m.today.getHours() = hour_int and m.today.getMinutes() >= minute_int) then
                 o.Description = "In Progress"
                 o.SDPosterUrl = "pkg:/images/video_clip_poster_sd_185x94.jpg"
                 o.HDPosterUrl = "pkg:/images/video_clip_poster_hd250x141.jpg"
