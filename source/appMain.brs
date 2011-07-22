@@ -295,7 +295,9 @@ Function ShowVideosForCategory(category)
                 screen.show()
             end if
             if msg.isListItemSelected() then
-                ShowVideoScreen(videos[msg.GetIndex()])
+                if videos[msg.GetIndex()].Available = true then
+                    ShowVideoScreen(videos[msg.GetIndex()])
+                endif
             else if msg.isScreenClosed() then
                 return -1
             end if
@@ -334,6 +336,7 @@ Function GetVideo(item)
     endif
     o = {}
     
+    o.Available = true
     if ext = "mp4" or ext = "m4v" then
         o.StreamFormat = "mp4"
         o.Description = item.description.GetText()
@@ -383,6 +386,7 @@ Function GetVideo(item)
                 hour_int = hour_int + offset
                 o.SDPosterUrl = "pkg:/images/video_clip_poster_sd_185x94_muted.jpg"
                 o.HDPosterUrl = "pkg:/images/video_clip_poster_hd250x141_muted.jpg"
+                o.Available = false
                 if hour_int >= 12 then
                     ampm = "PM"
                     if hour_int > 12 then
